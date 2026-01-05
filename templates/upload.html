@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="pl">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-  <title>Podpis PDF</title>
+  <title>PDF Signature</title>
   <style>
     html, body { height: 100%; margin: 0; font-family: Arial, sans-serif; }
     body { background: #f6f7fb; }
@@ -181,17 +181,17 @@
   <!-- Upload Section -->
   <div id="uploadSection" class="upload-section">
     <div class="card">
-      <h1>Podpis PDF</h1>
-      <p class="sub">Przeciągnij i upuść plik PDF poniżej lub kliknij, aby wybrać.</p>
+      <h1>PDF Signature</h1>
+      <p class="sub">Drag and drop PDF file below or click to select.</p>
 
       <div id="drop" class="drop" tabindex="0">
         <div class="icon">📄</div>
-        <div class="title">Upuść tutaj PDF</div>
-        <div class="hint">kliknij, aby wybrać z dysku</div>
+        <div class="title">Drop PDF here</div>
+        <div class="hint">click to select from disk</div>
       </div>
 
-      <div class="or">lub</div>
-      <label class="filebtn" for="fileInput">Wybierz plik PDF</label>
+      <div class="or">or</div>
+      <label class="filebtn" for="fileInput">Choose PDF file</label>
       <input id="fileInput" class="hidden" type="file" accept="application/pdf" />
 
       <div id="progress" class="progress"><div id="bar" class="bar"></div></div>
@@ -204,31 +204,31 @@
     <div class="tools">
       <div class="tools-row">
         <span style="font-size:12px;color:#333;">
-          Dotknij miejsce na dokumencie, gdzie ma pojawić się podpis.
+          Tap the place on the document where the signature should appear.
         </span>
       </div>
       <div class="tools-row">
-        <button id="clearAllBtn">Wyczyść podpis</button>
-        <button id="saveBtn" class="btn-primary">Zapisz podpis</button>
+        <button id="clearAllBtn">Clear signature</button>
+        <button id="saveBtn" class="btn-primary">Save signature</button>
       </div>
       <div id="status" class="tools-status"></div>
     </div>
 
     <div id="pdfContainer" class="container"></div>
 
-    <!-- Biały ekran do składania podpisu -->
+    <!-- White screen for signature creation -->
     <div id="sigOverlay">
       <div id="sigOverlayInner">
         <div style="font-size:13px;margin-bottom:6px;">
-          Podpisz się w prostokącie poniżej.
+          Sign in the rectangle below.
         </div>
         <div id="sigCanvasWrap">
           <canvas id="sigCanvas" width="800" height="400"></canvas>
         </div>
         <div style="margin-top:8px;">
-          <button id="sigClearBtn">Wyczyść</button>
-          <button id="sigCancelBtn">Anuluj</button>
-          <button id="sigApplyBtn" class="btn-primary">Zastosuj podpis</button>
+          <button id="sigClearBtn">Clear</button>
+          <button id="sigCancelBtn">Cancel</button>
+          <button id="sigApplyBtn" class="btn-primary">Apply signature</button>
         </div>
       </div>
     </div>
@@ -247,7 +247,7 @@
 
     var currentDocId = null;
     var canvasByIndex = {};
-    var originalPdfFile = null;  // Przechowujemy oryginalny PDF
+    var originalPdfFile = null;  // Store original PDF
 
     // ========== UPLOAD ==========
 
@@ -260,12 +260,12 @@
     }
 
     function uploadFile(file){
-      if(!isPdf(file)) { msg.innerHTML = 'Wybierz plik PDF.'; return; }
+      if(!isPdf(file)) { msg.innerHTML = 'Select a PDF file.'; return; }
 
-      // Przechowaj oryginalny plik
+      // Store original file
       originalPdfFile = file;
 
-      msg.innerHTML = 'Przetwarzanie…';
+      msg.innerHTML = 'Processing...';
       progress.style.display = 'block';
       bar.style.width = '0%';
 
@@ -288,13 +288,13 @@
               if (response.success && response.pages) {
                 showSigningInterface(response.pages, file.name);
               } else {
-                msg.innerHTML = 'Błąd: nieprawidłowa odpowiedź serwera.';
+                msg.innerHTML = 'Error: invalid server response.';
               }
             } catch(e) {
-              msg.innerHTML = 'Błąd parsowania odpowiedzi: ' + e.message;
+              msg.innerHTML = 'Response parsing error: ' + e.message;
             }
           } else {
-            msg.innerHTML = 'Błąd przesyłania (' + xhr.status + ').';
+            msg.innerHTML = 'Upload error (' + xhr.status + ').';
           }
         }
       };
@@ -329,7 +329,7 @@
       uploadSection.classList.add('hidden');
       signingSection.style.display = 'block';
 
-      // Renderuj strony
+      // Render pages
       pdfContainer.innerHTML = '';
       canvasByIndex = {};
 
@@ -344,7 +344,7 @@
         img.src = 'data:image/png;base64,' + pg.base64;
         img.width = pg.width;
         img.height = pg.height;
-        img.alt = 'strona ' + (pg.idx + 1);
+        img.alt = 'page ' + (pg.idx + 1);
 
         var canvas = document.createElement('canvas');
         canvas.className = 'draw';
@@ -570,19 +570,19 @@
 
     saveBtn.addEventListener('click', function(){
       if (!originalPdfFile) {
-        statusEl.innerHTML = 'Błąd: brak oryginalnego pliku';
+        statusEl.innerHTML = 'Error: no original file';
         return;
       }
 
-      statusEl.innerHTML = 'Przygotowywanie…';
+      statusEl.innerHTML = 'Preparing...';
       saveBtn.disabled = true;
       clearAllBtn.disabled = true;
 
-      // Konwertuj oryginalny PDF do base64
+      // Convert original PDF to base64
       var reader = new FileReader();
       reader.onload = function(e) {
         try {
-          var base64Data = e.target.result.split(',')[1]; // Usuń prefix "data:application/pdf;base64,"
+          var base64Data = e.target.result.split(',')[1]; // Remove prefix "data:application/pdf;base64,"
 
           var payload = {
             original_pdf: base64Data,
@@ -606,18 +606,18 @@
                 if (response.success) {
                   var downloadUrl = '/download/' + response.doc_id;
 
-                  // Przycisk pobierania
+                  // Download button
                   var downloadBtn = document.createElement('button');
                   downloadBtn.className = 'btn-primary';
-                  downloadBtn.textContent = 'Pobierz podpisany PDF';
+                  downloadBtn.textContent = 'Download signed PDF';
                   downloadBtn.style.marginRight = '8px';
                   downloadBtn.onclick = function() {
                     window.location.href = downloadUrl;
                   };
 
-                  // Przycisk powrotu do początku
+                  // Reset button
                   var resetBtn = document.createElement('button');
-                  resetBtn.textContent = 'Nowy dokument';
+                  resetBtn.textContent = 'New document';
                   resetBtn.onclick = function() {
                     window.location.href = '/';
                   };
@@ -628,31 +628,31 @@
                   saveBtn.disabled = false;
                   clearAllBtn.disabled = false;
                 } else {
-                  statusEl.innerHTML = 'Błąd podczas zapisywania';
+                  statusEl.innerHTML = 'Error while saving';
                   saveBtn.disabled = false;
                   clearAllBtn.disabled = false;
                 }
               } catch(e) {
-                statusEl.innerHTML = 'Błąd: ' + e.message;
+                statusEl.innerHTML = 'Error: ' + e.message;
                 saveBtn.disabled = false;
                 clearAllBtn.disabled = false;
               }
             },
             function(error){
-              statusEl.innerHTML = 'Błąd: ' + (error && error.message ? error.message : error);
+              statusEl.innerHTML = 'Error: ' + (error && error.message ? error.message : error);
               saveBtn.disabled = false;
               clearAllBtn.disabled = false;
             }
           );
         } catch(e){
-          statusEl.innerHTML = 'Błąd: ' + (e && e.message ? e.message : e);
+          statusEl.innerHTML = 'Error: ' + (e && e.message ? e.message : e);
           saveBtn.disabled = false;
           clearAllBtn.disabled = false;
         }
       };
 
       reader.onerror = function() {
-        statusEl.innerHTML = 'Błąd podczas odczytu pliku';
+        statusEl.innerHTML = 'Error reading file';
         saveBtn.disabled = false;
         clearAllBtn.disabled = false;
       };

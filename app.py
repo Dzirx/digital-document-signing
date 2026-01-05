@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 
-# Załaduj zmienne środowiskowe z .env (lokalnie)
+# Load environment variables from .env (locally)
 load_dotenv()
 
 from flask import (
@@ -26,12 +26,12 @@ import fitz  # PyMuPDF
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 64 * 1024 * 1024  # 64 MB
 
-# Folder do przechowywania podpisanych PDFów
+# Folder for storing signed PDFs
 SIGNED_PDFS_FOLDER = os.path.join(os.path.dirname(__file__), 'signed_pdfs')
 os.makedirs(SIGNED_PDFS_FOLDER, exist_ok=True)
 
 # =============================
-# Pomocnicze – PDF
+# Helpers – PDF
 # =============================
 
 ALLOWED_EXT = {"pdf"}
@@ -41,8 +41,8 @@ def allowed_file(filename: str) -> bool:
 
 def render_pdf_to_base64_images(pdf_bytes, zoom: float = 1.5):
     """
-    Renderuje strony PDF do obrazów PNG zakodowanych w base64
-    Zwraca listę dict: [{idx, base64, width, height}, ...]
+    Renders PDF pages to PNG images encoded in base64
+    Returns list of dict: [{idx, base64, width, height}, ...]
     """
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     pages = []
@@ -51,10 +51,10 @@ def render_pdf_to_base64_images(pdf_bytes, zoom: float = 1.5):
         mat = fitz.Matrix(zoom, zoom)
         pix = page.get_pixmap(matrix=mat, alpha=False)
 
-        # Konwertuj pixmap do PNG bytes
+        # Convert pixmap to PNG bytes
         png_bytes = pix.tobytes("png")
 
-        # Encode do base64
+        # Encode to base64
         base64_img = base64.b64encode(png_bytes).decode('utf-8')
 
         pages.append({
@@ -68,32 +68,32 @@ def render_pdf_to_base64_images(pdf_bytes, zoom: float = 1.5):
     return pages
 
 # =============================
-# Endpointy
+# Endpoints
 # =============================
 
 @app.get("/")
 def index():
-    """Strona główna - upload PDF"""
+    """Main page - upload PDF"""
     return render_template("upload.html")
 
 @app.post("/upload")
 def upload():
-    """Renderuj strony PDF dla podglądu"""
+    """Render PDF pages for preview"""
     if "file" not in request.files:
-        abort(400, "Brak pliku")
+        abort(400, "No file")
 
     f = request.files["file"]
     if f.filename == "":
-        abort(400, "Nie wybrano pliku")
+        abort(400, "No file selected")
 
     if not allowed_file(f.filename):
-        abort(400, "Dozwolone tylko PDF")
+        abort(400, "Only PDF allowed")
 
-    # Renderuj strony do podglądu
+    # Render pages for preview
     pdf_bytes = f.read()
     pages = render_pdf_to_base64_images(pdf_bytes, zoom=1.5)
 
-    # Zwróć renderowane strony
+    # Return rendered pages
     return jsonify({
         "success": True,
         "pages": pages,
@@ -102,25 +102,25 @@ def upload():
 
 @app.post("/submit")
 def submit():
-    """Zapisz podpisany dokument lokalnie"""
+    """Save signed document locally"""
     data = request.get_json(silent=True) or {}
     pages_with_signatures = data.get("pages", [])
     original_pdf_base64 = data.get("original_pdf", "")
     original_filename = data.get("filename", "document.pdf")
 
     if not original_pdf_base64:
-        abort(400, "Brak oryginalnego PDF")
+        abort(400, "No original PDF")
 
-    # Dekoduj oryginalny PDF z base64
+    # Decode original PDF from base64
     try:
         pdf_bytes = base64.b64decode(original_pdf_base64)
     except Exception:
-        abort(400, "Nieprawidłowy format PDF")
+        abort(400, "Invalid PDF format")
 
-    # Generuj doc_id
+    # Generate doc_id
     doc_id = uuid.uuid4().hex[:12]
 
-    # Otwórz PDF i dodaj podpisy
+    # Open PDF and add signatures
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
 
     try:
@@ -140,12 +140,12 @@ def submit():
             rect = page.rect
             page.insert_image(rect, stream=png_bytes, keep_proportion=False, overlay=True)
 
-        # Zapisz podpisany PDF do bytes
+        # Save signed PDF to bytes
         signed_pdf_bytes = doc.tobytes()
     finally:
         doc.close()
 
-    # Zapisz podpisany PDF lokalnie na dysku
+    # Save signed PDF locally to disk
     pdf_filename = f"{doc_id}.pdf"
     pdf_path = os.path.join(SIGNED_PDFS_FOLDER, pdf_filename)
 
@@ -156,17 +156,17 @@ def submit():
         "success": True,
         "doc_id": doc_id,
         "filename": pdf_filename,
-        "message": "Dokument zapisany lokalnie"
+        "message": "Document saved locally"
     })
 
 @app.get("/download/<string:doc_id>")
 def download_pdf(doc_id):
-    """Pobierz podpisany PDF"""
+    """Download signed PDF"""
     pdf_filename = f"{doc_id}.pdf"
     pdf_path = os.path.join(SIGNED_PDFS_FOLDER, pdf_filename)
 
     if not os.path.exists(pdf_path):
-        abort(404, "Plik nie znaleziony")
+        abort(404, "File not found")
 
     return send_file(
         pdf_path,
@@ -177,12 +177,12 @@ def download_pdf(doc_id):
 
 @app.get("/health")
 def health():
-    """Health check dla Vercel"""
+    """Health check for Vercel"""
     return jsonify({"status": "ok"})
 
 # =============================
-# Uruchomienie
+# Run
 # =============================
 if __name__ == "__main__":
-    # Lokalne uruchomienie
+    # Local run
     app.run(host="0.0.0.0", port=5000, debug=True)

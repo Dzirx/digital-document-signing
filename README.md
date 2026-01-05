@@ -1,6 +1,6 @@
 # PDF Signature - MVP
 
-A web application for signing PDF documents, ready for deployment on Vercel.
+A web application for signing PDF documents, ready for deployment.
 
 ## Overview
 
@@ -11,12 +11,10 @@ This Flask-based application provides a simple interface for uploading PDF docum
 - PDF file upload with drag-and-drop support
 - Interactive signature drawing on documents
 - Document storage and management
-- Ready for production deployment on Vercel
 
 ## Requirements
 
 - Python 3.9 or higher
-- Vercel account (for deployment)
 
 ## Local Development
 
