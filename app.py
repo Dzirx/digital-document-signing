@@ -1,8 +1,4 @@
-import os
-import uuid
 import base64
-import json
-from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 # Load environment variables from .env (locally)
@@ -14,7 +10,6 @@ from flask import (
     render_template,
     abort,
     jsonify,
-    send_file,
 )
 
 import fitz  # PyMuPDF
@@ -26,9 +21,7 @@ import fitz  # PyMuPDF
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 64 * 1024 * 1024  # 64 MB
 
-# Folder for storing signed PDFs
-SIGNED_PDFS_FOLDER = os.path.join(os.path.dirname(__file__), 'signed_pdfs')
-os.makedirs(SIGNED_PDFS_FOLDER, exist_ok=True)
+# No longer storing PDFs on server - returning directly to client
 
 # =============================
 # Helpers – PDF
@@ -102,7 +95,7 @@ def upload():
 
 @app.post("/submit")
 def submit():
-    """Save signed document locally"""
+    """Return signed document directly as base64"""
     data = request.get_json(silent=True) or {}
     pages_with_signatures = data.get("pages", [])
     original_pdf_base64 = data.get("original_pdf", "")
@@ -116,9 +109,6 @@ def submit():
         pdf_bytes = base64.b64decode(original_pdf_base64)
     except Exception:
         abort(400, "Invalid PDF format")
-
-    # Generate doc_id
-    doc_id = uuid.uuid4().hex[:12]
 
     # Open PDF and add signatures
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
@@ -145,35 +135,14 @@ def submit():
     finally:
         doc.close()
 
-    # Save signed PDF locally to disk
-    pdf_filename = f"{doc_id}.pdf"
-    pdf_path = os.path.join(SIGNED_PDFS_FOLDER, pdf_filename)
-
-    with open(pdf_path, 'wb') as f:
-        f.write(signed_pdf_bytes)
+    # Return signed PDF as base64
+    signed_pdf_base64 = base64.b64encode(signed_pdf_bytes).decode('utf-8')
 
     return jsonify({
         "success": True,
-        "doc_id": doc_id,
-        "filename": pdf_filename,
-        "message": "Document saved locally"
+        "pdf_base64": signed_pdf_base64,
+        "filename": original_filename
     })
-
-@app.get("/download/<string:doc_id>")
-def download_pdf(doc_id):
-    """Download signed PDF"""
-    pdf_filename = f"{doc_id}.pdf"
-    pdf_path = os.path.join(SIGNED_PDFS_FOLDER, pdf_filename)
-
-    if not os.path.exists(pdf_path):
-        abort(404, "File not found")
-
-    return send_file(
-        pdf_path,
-        mimetype='application/pdf',
-        as_attachment=True,
-        download_name=pdf_filename
-    )
 
 @app.get("/health")
 def health():

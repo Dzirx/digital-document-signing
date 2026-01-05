@@ -603,26 +603,33 @@
             function(responseText){
               try {
                 var response = JSON.parse(responseText);
-                if (response.success) {
-                  var downloadUrl = '/download/' + response.doc_id;
+                if (response.success && response.pdf_base64) {
+                  // Convert base64 to blob and download
+                  var byteCharacters = atob(response.pdf_base64);
+                  var byteNumbers = new Array(byteCharacters.length);
+                  for (var i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                  }
+                  var byteArray = new Uint8Array(byteNumbers);
+                  var blob = new Blob([byteArray], {type: 'application/pdf'});
 
-                  // Download button
-                  var downloadBtn = document.createElement('button');
-                  downloadBtn.className = 'btn-primary';
-                  downloadBtn.textContent = 'Download signed PDF';
-                  downloadBtn.style.marginRight = '8px';
-                  downloadBtn.onclick = function() {
-                    window.location.href = downloadUrl;
-                  };
+                  // Create download link
+                  var downloadUrl = URL.createObjectURL(blob);
+                  var a = document.createElement('a');
+                  a.href = downloadUrl;
+                  a.download = response.filename || 'signed_document.pdf';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(downloadUrl);
 
-                  // Reset button
+                  // Show success message and reset button
+                  statusEl.innerHTML = 'Document downloaded successfully! ';
                   var resetBtn = document.createElement('button');
                   resetBtn.textContent = 'New document';
                   resetBtn.onclick = function() {
                     window.location.href = '/';
                   };
-
-                  statusEl.appendChild(downloadBtn);
                   statusEl.appendChild(resetBtn);
 
                   saveBtn.disabled = false;
