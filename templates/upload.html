@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Podpis PDF</title>
+  <style>
+    html, body { height: 100%; margin: 0; font-family: Arial, sans-serif; }
+    body { background: #f6f7fb; }
+
+    /* Upload Section */
+    .upload-section {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      width: 100%;
+      max-width: 720px;
+      background: #fff;
+      border: 1px solid #e8e8ef;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(20,20,40,.06);
+      padding: 28px;
+    }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    p.sub { margin: 0 0 16px; color: #6b7280; font-size: 13px; }
+
+    .drop {
+      border: 2px dashed #c9cdda;
+      border-radius: 12px;
+      padding: 28px;
+      text-align: center;
+      transition: all .2s ease;
+      background: #fbfbfe;
+      cursor: pointer;
+    }
+    .drop.hover { border-color: #6b7cff; background: #f2f3ff; }
+    .drop .icon { font-size: 42px; line-height: 1; margin-bottom: 8px; }
+    .drop .title { font-size: 18px; margin: 6px 0; }
+    .drop .hint { color: #6b7280; font-size: 13px; }
+
+    .or { text-align:center; color:#9aa0a6; margin:14px 0; }
+    .filebtn {
+      display:inline-block;
+      padding:10px 16px;
+      border-radius:10px;
+      border:1px solid #111;
+      background:#111;
+      color:#fff;
+      cursor:pointer;
+      text-decoration:none;
+      font-size:14px;
+    }
+    .hidden { display:none !important; }
+
+    .progress {
+      height: 8px;
+      background:#eef0f6;
+      border-radius: 6px;
+      overflow:hidden;
+      margin-top:14px;
+      display:none;
+    }
+    .progress .bar {
+      height:100%;
+      width:0%;
+      background:#3b82f6;
+      transition: width .2s ease;
+    }
+    .foot { margin-top: 14px; font-size: 12px; color:#8a8f98; }
+
+    /* Signing Section */
+    .signing-section {
+      display: none;
+      background:#e0e0e0;
+    }
+
+    .tools {
+      background:#ffffff;
+      padding: 8px 10px;
+      border-bottom: 1px solid #c0c0c0;
+      text-align:center;
+    }
+    .tools-row {
+      margin: 4px 0;
+    }
+    .tools-status {
+      font-size:12px;
+      color:#555555;
+      min-height: 16px;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 16px auto 24px;
+      padding: 0 10px;
+    }
+
+    .page {
+      position: relative;
+      margin: 16px auto 8px;
+      max-width: 100%;
+      border:1px solid #c0c0c0;
+      background:#ffffff;
+    }
+    .page .bg {
+      display:block;
+      width:100%;
+      height:auto;
+    }
+
+    .draw {
+      position:absolute;
+      left:0;
+      top:0;
+      z-index: 10;
+      touch-action: none;
+    }
+
+    button {
+      padding: 6px 12px;
+      border-radius: 4px;
+      border:1px solid #999999;
+      background:#f8f8f8;
+      cursor: pointer;
+      font-size:12px;
+      color:#222222;
+      margin: 0 4px;
+    }
+    button:hover {
+      background:#eeeeee;
+    }
+    .btn-primary {
+      background:#222222;
+      border-color:#222222;
+      color:#ffffff;
+      font-weight:bold;
+    }
+    .btn-primary:hover {
+      background:#000000;
+      border-color:#000000;
+    }
+
+    #sigOverlay {
+      display:none;
+      position:fixed;
+      left:0;
+      top:0;
+      width:100%;
+      height:100%;
+      background:#ffffff;
+      z-index:2000;
+    }
+    #sigOverlayInner {
+      position:absolute;
+      left:0;
+      right:0;
+      top:10px;
+      text-align:center;
+    }
+    #sigCanvasWrap {
+      margin:10px auto;
+      border:1px solid #999999;
+      background:#ffffff;
+      width:90%;
+      max-width:800px;
+      height:300px;
+      height:60vh;
+    }
+    #sigCanvas {
+      width:100%;
+      height:100%;
+    }
+  </style>
+</head>
+<body>
+  <!-- Upload Section -->
+  <div id="uploadSection" class="upload-section">
+    <div class="card">
+      <h1>Podpis PDF</h1>
+      <p class="sub">Przeciągnij i upuść plik PDF poniżej lub kliknij, aby wybrać.</p>
+
+      <div id="drop" class="drop" tabindex="0">
+        <div class="icon">📄</div>
+        <div class="title">Upuść tutaj PDF</div>
+        <div class="hint">kliknij, aby wybrać z dysku</div>
+      </div>
+
+      <div class="or">lub</div>
+      <label class="filebtn" for="fileInput">Wybierz plik PDF</label>
+      <input id="fileInput" class="hidden" type="file" accept="application/pdf" />
+
+      <div id="progress" class="progress"><div id="bar" class="bar"></div></div>
+      <div id="msg" class="foot"></div>
+    </div>
+  </div>
+
+  <!-- Signing Section -->
+  <div id="signingSection" class="signing-section">
+    <div class="tools">
+      <div class="tools-row">
+        <span style="font-size:12px;color:#333;">
+          Dotknij miejsce na dokumencie, gdzie ma pojawić się podpis.
+        </span>
+      </div>
+      <div class="tools-row">
+        <button id="clearAllBtn">Wyczyść podpis</button>
+        <button id="saveBtn" class="btn-primary">Zapisz podpis</button>
+      </div>
+      <div id="status" class="tools-status"></div>
+    </div>
+
+    <div id="pdfContainer" class="container"></div>
+
+    <!-- Biały ekran do składania podpisu -->
+    <div id="sigOverlay">
+      <div id="sigOverlayInner">
+        <div style="font-size:13px;margin-bottom:6px;">
+          Podpisz się w prostokącie poniżej.
+        </div>
+        <div id="sigCanvasWrap">
+          <canvas id="sigCanvas" width="800" height="400"></canvas>
+        </div>
+        <div style="margin-top:8px;">
+          <button id="sigClearBtn">Wyczyść</button>
+          <button id="sigCancelBtn">Anuluj</button>
+          <button id="sigApplyBtn" class="btn-primary">Zastosuj podpis</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    var uploadSection = document.getElementById('uploadSection');
+    var signingSection = document.getElementById('signingSection');
+    var drop = document.getElementById('drop');
+    var fileInput = document.getElementById('fileInput');
+    var progress = document.getElementById('progress');
+    var bar = document.getElementById('bar');
+    var msg = document.getElementById('msg');
+    var pdfContainer = document.getElementById('pdfContainer');
+
+    var currentDocId = null;
+    var canvasByIndex = {};
+    var originalPdfFile = null;  // Przechowujemy oryginalny PDF
+
+    // ========== UPLOAD ==========
+
+    function isPdf(file){
+      if(!file) return false;
+      var name = file.name || '';
+      var type = file.type || '';
+      var ext = name.toLowerCase().split('.').pop();
+      return (ext === 'pdf') || (type === 'application/pdf');
+    }
+
+    function uploadFile(file){
+      if(!isPdf(file)) { msg.innerHTML = 'Wybierz plik PDF.'; return; }
+
+      // Przechowaj oryginalny plik
+      originalPdfFile = file;
+
+      msg.innerHTML = 'Przetwarzanie…';
+      progress.style.display = 'block';
+      bar.style.width = '0%';
+
+      var form = new FormData();
+      form.append('file', file, file.name || 'document.pdf');
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/upload', true);
+      xhr.upload.onprogress = function(e){
+        if(e.lengthComputable){
+          var p = Math.round((e.loaded/e.total)*100);
+          bar.style.width = p + '%';
+        }
+      };
+      xhr.onreadystatechange = function(){
+        if(xhr.readyState === 4){
+          if(xhr.status >= 200 && xhr.status < 300){
+            try {
+              var response = JSON.parse(xhr.responseText);
+              if (response.success && response.pages) {
+                showSigningInterface(response.pages, file.name);
+              } else {
+                msg.innerHTML = 'Błąd: nieprawidłowa odpowiedź serwera.';
+              }
+            } catch(e) {
+              msg.innerHTML = 'Błąd parsowania odpowiedzi: ' + e.message;
+            }
+          } else {
+            msg.innerHTML = 'Błąd przesyłania (' + xhr.status + ').';
+          }
+        }
+      };
+      xhr.send(form);
+    }
+
+    function stop(e){
+      if(e.preventDefault) e.preventDefault();
+      if(e.stopPropagation) e.stopPropagation();
+      return false;
+    }
+
+    drop.addEventListener('dragenter', function(e){ stop(e); drop.className = 'drop hover'; }, false);
+    drop.addEventListener('dragover',  function(e){ stop(e); drop.className = 'drop hover'; }, false);
+    drop.addEventListener('dragleave', function(e){ stop(e); drop.className = 'drop'; }, false);
+    drop.addEventListener('drop',      function(e){
+      stop(e);
+      drop.className = 'drop';
+      var files = (e.dataTransfer && e.dataTransfer.files) ? e.dataTransfer.files : null;
+      if(files && files.length){ uploadFile(files[0]); }
+    }, false);
+
+    drop.addEventListener('click', function(){ fileInput.click(); }, false);
+    fileInput.addEventListener('change', function(){
+      var f = fileInput.files && fileInput.files[0];
+      if(f){ uploadFile(f); }
+    }, false);
+
+    // ========== SIGNING ==========
+
+    function showSigningInterface(pages, filename) {
+      uploadSection.classList.add('hidden');
+      signingSection.style.display = 'block';
+
+      // Renderuj strony
+      pdfContainer.innerHTML = '';
+      canvasByIndex = {};
+
+      for (var i = 0; i < pages.length; i++) {
+        var pg = pages[i];
+        var pageDiv = document.createElement('div');
+        pageDiv.className = 'page';
+        pageDiv.style.width = pg.width + 'px';
+
+        var img = document.createElement('img');
+        img.className = 'bg';
+        img.src = 'data:image/png;base64,' + pg.base64;
+        img.width = pg.width;
+        img.height = pg.height;
+        img.alt = 'strona ' + (pg.idx + 1);
+
+        var canvas = document.createElement('canvas');
+        canvas.className = 'draw';
+        canvas.setAttribute('data-pindex', pg.idx);
+        canvas.width = pg.width;
+        canvas.height = pg.height;
+        canvas.style.width = pg.width + 'px';
+        canvas.style.height = pg.height + 'px';
+
+        pageDiv.appendChild(img);
+        pageDiv.appendChild(canvas);
+        pdfContainer.appendChild(pageDiv);
+
+        canvasByIndex[pg.idx] = canvas;
+        setupPageCanvas(canvas, pg.idx);
+      }
+    }
+
+    var currentSelection = null;
+
+    function selectAreaForSignature(pageIndex, cnv, clientX, clientY) {
+      var rect = cnv.getBoundingClientRect();
+      var x = (clientX - rect.left) * (cnv.width / rect.width);
+      var y = (clientY - rect.top) * (cnv.height / rect.height);
+
+      var w = cnv.width * 0.4;
+      var h = cnv.height * 0.15;
+
+      var left = x - w / 2;
+      var top  = y - h / 2;
+
+      if (left < 0) left = 0;
+      if (top < 0) top = 0;
+      if (left + w > cnv.width) left = cnv.width - w;
+      if (top + h > cnv.height) top = cnv.height - h;
+
+      currentSelection = {
+        pageIndex: pageIndex,
+        x: left,
+        y: top,
+        w: w,
+        h: h
+      };
+
+      var ctx = cnv.getContext('2d');
+      ctx.clearRect(0, 0, cnv.width, cnv.height);
+      ctx.strokeStyle = '#ff0000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(left, top, w, h);
+
+      openSignatureOverlay();
+    }
+
+    function setupPageCanvas(cnv, pageIndex) {
+      cnv.addEventListener('click', function(e){
+        selectAreaForSignature(pageIndex, cnv, e.clientX, e.clientY);
+      }, false);
+
+      cnv.addEventListener('touchstart', function(e){
+        if (!e.touches || e.touches.length === 0) return;
+        var t = e.touches[0];
+        if (e.preventDefault) e.preventDefault();
+        selectAreaForSignature(pageIndex, cnv, t.clientX, t.clientY);
+      }, false);
+    }
+
+    // Signature overlay
+    var sigOverlay = document.getElementById('sigOverlay');
+    var sigCanvas = document.getElementById('sigCanvas');
+    var sigClearBtn = document.getElementById('sigClearBtn');
+    var sigCancelBtn = document.getElementById('sigCancelBtn');
+    var sigApplyBtn = document.getElementById('sigApplyBtn');
+
+    var sigCtx = sigCanvas.getContext('2d');
+    sigCtx.lineCap = 'round';
+    sigCtx.lineJoin = 'round';
+    sigCtx.strokeStyle = '#000000';
+    sigCtx.lineWidth = 4;
+
+    var sigDrawing = false;
+    var sigLastX = 0;
+    var sigLastY = 0;
+
+    function sigRect(){ return sigCanvas.getBoundingClientRect(); }
+    function sigScaleX(x, r){ return (x - r.left) * (sigCanvas.width / r.width); }
+    function sigScaleY(y, r){ return (y - r.top) * (sigCanvas.height / r.height); }
+
+    function sigBegin(x, y){
+      var r = sigRect();
+      sigDrawing = true;
+      sigLastX = sigScaleX(x, r);
+      sigLastY = sigScaleY(y, r);
+    }
+    function sigDrawTo(x, y){
+      if (!sigDrawing) return;
+      var r = sigRect();
+      var nx = sigScaleX(x, r);
+      var ny = sigScaleY(y, r);
+      sigCtx.beginPath();
+      sigCtx.moveTo(sigLastX, sigLastY);
+      sigCtx.lineTo(nx, ny);
+      sigCtx.stroke();
+      sigLastX = nx;
+      sigLastY = ny;
+    }
+    function sigEnd(){
+      sigDrawing = false;
+    }
+
+    if (window.PointerEvent) {
+      sigCanvas.addEventListener('pointerdown', function(e){ if(e.preventDefault) e.preventDefault(); sigBegin(e.clientX, e.clientY); }, false);
+      sigCanvas.addEventListener('pointermove', function(e){ if(e.preventDefault) e.preventDefault(); sigDrawTo(e.clientX, e.clientY); }, false);
+      sigCanvas.addEventListener('pointerup', function(e){ if(e.preventDefault) e.preventDefault(); sigEnd(); }, false);
+      sigCanvas.addEventListener('pointercancel', function(e){ if(e.preventDefault) e.preventDefault(); sigEnd(); }, false);
+      sigCanvas.addEventListener('pointerleave', function(e){ if(e.preventDefault) e.preventDefault(); sigEnd(); }, false);
+      sigCanvas.style.touchAction = 'none';
+    }
+
+    sigCanvas.addEventListener('touchstart', function(e){
+      if (!e.touches || e.touches.length === 0) return;
+      if(e.preventDefault) e.preventDefault();
+      var t = e.touches[0];
+      sigBegin(t.clientX, t.clientY);
+    }, false);
+    sigCanvas.addEventListener('touchmove', function(e){
+      if (!e.touches || e.touches.length === 0) return;
+      if(e.preventDefault) e.preventDefault();
+      var t = e.touches[0];
+      sigDrawTo(t.clientX, t.clientY);
+    }, false);
+    sigCanvas.addEventListener('touchend', function(e){
+      if(e.preventDefault) e.preventDefault();
+      sigEnd();
+    }, false);
+    sigCanvas.addEventListener('touchcancel', function(e){
+      if(e.preventDefault) e.preventDefault();
+      sigEnd();
+    }, false);
+
+    sigCanvas.addEventListener('mousedown', function(e){ if(e.preventDefault) e.preventDefault(); sigBegin(e.clientX, e.clientY); }, false);
+    sigCanvas.addEventListener('mousemove', function(e){ if(e.preventDefault) e.preventDefault(); sigDrawTo(e.clientX, e.clientY); }, false);
+    sigCanvas.addEventListener('mouseup', function(e){ if(e.preventDefault) e.preventDefault(); sigEnd(); }, false);
+    sigCanvas.addEventListener('mouseleave', function(e){ if(e.preventDefault) e.preventDefault(); sigEnd(); }, false);
+
+    function openSignatureOverlay(){
+      sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+      sigOverlay.style.display = 'block';
+    }
+
+    function hideSignatureOverlay(){
+      sigOverlay.style.display = 'none';
+    }
+
+    sigClearBtn.addEventListener('click', function(){
+      sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+    }, false);
+
+    sigCancelBtn.addEventListener('click', function(){
+      if (currentSelection && canvasByIndex[currentSelection.pageIndex]) {
+        var cnv = canvasByIndex[currentSelection.pageIndex];
+        var ctx = cnv.getContext('2d');
+        ctx.clearRect(0, 0, cnv.width, cnv.height);
+      }
+      currentSelection = null;
+      hideSignatureOverlay();
+    }, false);
+
+    sigApplyBtn.addEventListener('click', function(){
+      if (!currentSelection) {
+        hideSignatureOverlay();
+        return;
+      }
+      var sel = currentSelection;
+      var cnv = canvasByIndex[sel.pageIndex];
+      if (!cnv) {
+        hideSignatureOverlay();
+        return;
+      }
+      var ctx = cnv.getContext('2d');
+      var img = new Image();
+      img.onload = function(){
+        ctx.clearRect(0, 0, cnv.width, cnv.height);
+        ctx.drawImage(img, 0, 0, sigCanvas.width, sigCanvas.height, sel.x, sel.y, sel.w, sel.h);
+        hideSignatureOverlay();
+      };
+      img.src = sigCanvas.toDataURL('image/png');
+    }, false);
+
+    // Save button
+    var clearAllBtn = document.getElementById('clearAllBtn');
+    var saveBtn = document.getElementById('saveBtn');
+    var statusEl = document.getElementById('status');
+
+    clearAllBtn.addEventListener('click', function(){
+      for (var k in canvasByIndex){
+        if (!canvasByIndex.hasOwnProperty(k)) continue;
+        var c = canvasByIndex[k];
+        var cctx = c.getContext('2d');
+        cctx.clearRect(0,0,c.width,c.height);
+      }
+      currentSelection = null;
+    }, false);
+
+    function postJSON(url, obj, ok, err){
+      try{
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onreadystatechange = function(){
+          if (xhr.readyState === 4){
+            if (xhr.status >= 200 && xhr.status < 300){
+              ok(xhr.responseText);
+            } else {
+              err(new Error('HTTP ' + xhr.status));
+            }
+          }
+        };
+        xhr.send(JSON.stringify(obj));
+      }catch(ex){
+        err(ex);
+      }
+    }
+
+    saveBtn.addEventListener('click', function(){
+      if (!originalPdfFile) {
+        statusEl.innerHTML = 'Błąd: brak oryginalnego pliku';
+        return;
+      }
+
+      statusEl.innerHTML = 'Przygotowywanie…';
+      saveBtn.disabled = true;
+      clearAllBtn.disabled = true;
+
+      // Konwertuj oryginalny PDF do base64
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          var base64Data = e.target.result.split(',')[1]; // Usuń prefix "data:application/pdf;base64,"
+
+          var payload = {
+            original_pdf: base64Data,
+            filename: originalPdfFile.name,
+            pages: []
+          };
+
+          for (var k in canvasByIndex){
+            if (!canvasByIndex.hasOwnProperty(k)) continue;
+            var cnv = canvasByIndex[k];
+            var dataURL = cnv.toDataURL('image/png');
+            payload.pages.push({ index: parseInt(k,10), dataURL: dataURL });
+          }
+
+          statusEl.innerHTML = '';
+
+          postJSON('/submit', payload,
+            function(responseText){
+              try {
+                var response = JSON.parse(responseText);
+                if (response.success) {
+                  var downloadUrl = '/download/' + response.doc_id;
+
+                  // Przycisk pobierania
+                  var downloadBtn = document.createElement('button');
+                  downloadBtn.className = 'btn-primary';
+                  downloadBtn.textContent = 'Pobierz podpisany PDF';
+                  downloadBtn.style.marginRight = '8px';
+                  downloadBtn.onclick = function() {
+                    window.location.href = downloadUrl;
+                  };
+
+                  // Przycisk powrotu do początku
+                  var resetBtn = document.createElement('button');
+                  resetBtn.textContent = 'Nowy dokument';
+                  resetBtn.onclick = function() {
+                    window.location.href = '/';
+                  };
+
+                  statusEl.appendChild(downloadBtn);
+                  statusEl.appendChild(resetBtn);
+
+                  saveBtn.disabled = false;
+                  clearAllBtn.disabled = false;
+                } else {
+                  statusEl.innerHTML = 'Błąd podczas zapisywania';
+                  saveBtn.disabled = false;
+                  clearAllBtn.disabled = false;
+                }
+              } catch(e) {
+                statusEl.innerHTML = 'Błąd: ' + e.message;
+                saveBtn.disabled = false;
+                clearAllBtn.disabled = false;
+              }
+            },
+            function(error){
+              statusEl.innerHTML = 'Błąd: ' + (error && error.message ? error.message : error);
+              saveBtn.disabled = false;
+              clearAllBtn.disabled = false;
+            }
+          );
+        } catch(e){
+          statusEl.innerHTML = 'Błąd: ' + (e && e.message ? e.message : e);
+          saveBtn.disabled = false;
+          clearAllBtn.disabled = false;
+        }
+      };
+
+      reader.onerror = function() {
+        statusEl.innerHTML = 'Błąd podczas odczytu pliku';
+        saveBtn.disabled = false;
+        clearAllBtn.disabled = false;
+      };
+
+      reader.readAsDataURL(originalPdfFile);
+    }, false);
+
+  })();
+  </script>
+</body>
+</html>
